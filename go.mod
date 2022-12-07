@@ -11,8 +11,11 @@ require (
 require (
 	github.com/go-ozzo/ozzo-routing v2.1.4+incompatible // indirect
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/klauspost/compress v1.11.7 // indirect
+	github.com/matoous/go-nanoid/v2 v2.0.0 // indirect
+	github.com/ravendb/ravendb-go-client v0.0.0-20220329095225-8c32f0ab1fe3 // indirect
 	github.com/stretchr/testify v1.8.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 )

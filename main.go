@@ -3,37 +3,51 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"time"
 
+	gonanoid "github.com/matoous/go-nanoid/v2"
 	routing "github.com/qiangxue/fasthttp-routing"
-	"github.com/surrealdb/surrealdb.go"
+	"github.com/ravendb/ravendb-go-client"
 	"github.com/valyala/fasthttp"
 )
 
 func main() {
-	db, err := surrealdb.New("ws://0.0.0.0:8000/rpc")
+
+	store := getDocumentStore("test")
+	session, err := store.OpenSession("")
 	if err != nil {
-		panic(err)
+		log.Fatalf("store.OpenSession() failed with %s", err)
 	}
-
-	db.Signin(map[string]any{
-		"user": "root",
-		"pass": "root",
-	})
-
-	db.Use("test", "test")
 
 	router := routing.New()
 
 	router.Get("/", func(c *routing.Context) error {
-		fmt.Println("received")
-		_, err := db.Create("users:tomas", map[string]interface{}{
-			"name":     "Tomas",
-			"lastName": "Weigenast",
+		err = session.Store(&User{
+			ID:        gonanoid.Must(),
+			CreatedAt: time.Now(),
+			Name:      "Tomas",
+			LastName:  "Weigenast",
+			Friends:   []string{"Jorge", "Diana", "Facundo"},
+			Likes: map[string]bool{
+				"cats": true,
+				"dogs": false,
+			},
 		})
 
 		if err != nil {
 			c.WriteString(err.Error())
+			return nil
+		}
+
+		fmt.Println("stored")
+
+		err = session.SaveChanges()
+
+		if err != nil {
+			c.WriteString(err.Error())
 		} else {
+			fmt.Println("saved")
 			c.WriteString("success")
 		}
 
@@ -41,17 +55,38 @@ func main() {
 	})
 
 	router.Get("/read", func(c *routing.Context) error {
-		fmt.Println("request received")
-		res, err := db.Select("users:tomas")
+		var user *User
+		err := session.Load(&user, "users/1-A")
+		fmt.Println("user received")
+
 		if err != nil {
 			c.WriteString(err.Error())
 		} else {
-			j, _ := json.Marshal(res)
+			j, _ := json.Marshal(user)
 			c.WriteString(string(j))
 		}
 
 		return nil
 	})
 
-	panic(fasthttp.ListenAndServe(":8080", router.HandleRequest))
+	fmt.Println("up and running")
+	panic(fasthttp.ListenAndServe(":9000", router.HandleRequest))
+}
+
+func getDocumentStore(databaseName string) *ravendb.DocumentStore {
+	serverNodes := []string{"http://localhost:8080"}
+	store := ravendb.NewDocumentStore(serverNodes, databaseName)
+	if err := store.Initialize(); err != nil {
+		panic(err)
+	}
+	return store
+}
+
+type User struct {
+	ID        string
+	CreatedAt time.Time
+	Name      string
+	LastName  string
+	Friends   []string
+	Likes     map[string]bool
 }
